@@ -28,7 +28,7 @@ namespace TelegramApiForProvider.Service
                 if (item.IsAccept == null && item.CreateDatetime <= DateTime.Today.AddDays(1))
                 {
                     var user = db.Users.Where(x => x.PartnerId == item.PartnerId).FirstOrDefault();
-                    await _telegramBotService.SendMessage(user.ChatId, $"Вы все еще не приняли заказ.\n\nЗаказ номер: {item.OrderNumber} от {item.CreateDatetime}", item.MessageId);
+                    await _telegramBotService.SendMessage(user.ChatId, $"❗️Вы все еще не приняли заказ.❗️\n\nЗаказ номер: {item.OrderNumber} от {item.CreateDatetime}", item.MessageId);
                     continue;
                 }
             }

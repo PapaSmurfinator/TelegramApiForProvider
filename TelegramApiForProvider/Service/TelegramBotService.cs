@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace TelegramApiForProvider.Service
@@ -25,9 +26,9 @@ namespace TelegramApiForProvider.Service
             _client.SendTextMessageAsync(chatId, text);
         }
 
-        public Task<Message> SendMessage(long chatId, string text, IReplyMarkup replyMarkup)
+        public Task<Message> SendMessage(long chatId, string text, IReplyMarkup replyMarkup,ParseMode parse)
         {
-            return _client.SendTextMessageAsync(chatId, text, replyMarkup: replyMarkup);
+            return _client.SendTextMessageAsync(chatId, text, replyMarkup: replyMarkup,parseMode:parse);
         }
 
         public Task<Message> SendMessage(long chatId, string text, int? reply_to_message_id)

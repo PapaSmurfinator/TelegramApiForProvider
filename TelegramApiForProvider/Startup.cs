@@ -36,6 +36,7 @@ namespace TelegramApiForProvider
             services.AddTransient<ReminderService>();
             services.AddControllers().AddNewtonsoftJson();
 
+            services.AddSingleton<IOrderService, OrderService>();
             services.AddSingleton<ISendService, SendService>();
 
             services.AddSingleton<ITelegramBotService>(provider =>

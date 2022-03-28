@@ -1,12 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
-using System;
+﻿using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System.Threading.Tasks;
-using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramApiForProvider.DbService;
 using TelegramApiForProvider.Extended;
@@ -22,45 +18,22 @@ namespace TelegramApiForProvider.Controllers
         private readonly OrderContext db;
 
         private readonly ITelegramBotService _telegramBotService;
+        private readonly IOrderService _orderService;
 
-        public SendingController(OrderContext context, ITelegramBotService telegramBotService)
+        public SendingController(OrderContext context, ITelegramBotService telegramBotService, IOrderService orderService)
         {
             db = context;
             _telegramBotService = telegramBotService;
+            _orderService = orderService;
         }
 
-        Message sentMessage = null;
-        ExtendedOrder extendedOrder;
-        OrderParameter _orderParameter;
-        
+        private Message sentMessage = null;
+        private ExtendedOrder extendedOrder;
+
 
         [HttpPost]
         public async Task ReceiveAndSend(OrderParameter orderParameter)
         {
-            _orderParameter = new OrderParameter
-            {
-                Id = orderParameter.Id,
-                CustomerName = orderParameter.CustomerName,
-                PartnerName = orderParameter.PartnerName,
-                PartnerId = orderParameter.PartnerId,
-                Amount = orderParameter.Amount,
-                DeliveryCost = orderParameter.DeliveryCost,
-                Discount = orderParameter.Discount,
-                PhoneNumber = orderParameter.PhoneNumber,
-                OrderNumber = orderParameter.OrderNumber,
-                Comment = orderParameter.Comment,
-                CreateDatetime = orderParameter.CreateDatetime,
-                DeliveryAddress = orderParameter.DeliveryAddress,
-                DeliverAtTime = orderParameter.DeliverAtTime,
-                OrderContent = orderParameter.OrderContent,
-                CutleryQuantity = orderParameter.CutleryQuantity,
-                HasAdminPanel = orderParameter.HasAdminPanel,
-                TotalAmount = orderParameter.TotalAmount,
-                PaymentMethod = orderParameter.PaymentMethod,
-                DeliveryLocation = orderParameter.DeliveryLocation,
-                DeliveryType = orderParameter.DeliveryType,
-                Products = orderParameter.Products
-            };
             extendedOrder = new ExtendedOrder
             {
                 Id = orderParameter.Id,
@@ -69,30 +42,30 @@ namespace TelegramApiForProvider.Controllers
                 PartnerId = orderParameter.PartnerId,
                 CreateDatetime = orderParameter.CreateDatetime
             };
+
+            
             InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(
-                // first row
                 new InlineKeyboardButton[]
                 {
-                    InlineKeyboardButton.WithCallbackData(text: "Принять", callbackData: $"{_orderParameter.OrderNumber} Принят"),
-                    InlineKeyboardButton.WithCallbackData(text: "Отклонить", callbackData: $"{_orderParameter.OrderNumber} Отклонён"),
+                    InlineKeyboardButton.WithCallbackData(text: "Принять ✅", callbackData: $"{orderParameter.OrderNumber} Принят"),
+                    InlineKeyboardButton.WithCallbackData(text: "Отклонить ❌", callbackData: $"{orderParameter.OrderNumber} Отклонён"),
                 });
-            string orderText=null;
-            OrderService orderService=new OrderService();
-            if (_orderParameter.DeliveryType.Id==(int)DeliveryName.CronMarket)
+
+            string orderText = null;
+            if (orderParameter.DeliveryType.Id == (int)DeliveryName.CronMarket)
             {
-                orderText = orderService.CreateDescriptionForCron(_orderParameter);
+                orderText = _orderService.CreateDescriptionForCron(orderParameter);
             }
-            else if (_orderParameter.DeliveryType.Id == (int)DeliveryName.Marketplace)
+            if (orderParameter.DeliveryType.Id == (int)DeliveryName.Marketplace)
             {
-                 orderText = orderService.CreateDescriptionForPartner(_orderParameter);
-            }    
+                orderText = _orderService.CreateDescriptionForPartner(orderParameter);
+            }
 
-
-            Models.User user = db.Users.FirstOrDefault(x => x.PartnerId == _orderParameter.PartnerId);
+            Models.User user = db.Users.FirstOrDefault(x => x.PartnerId == orderParameter.PartnerId);
 
             if (IsOrderAccept(extendedOrder))
             {
-                sentMessage = await _telegramBotService.SendMessage(user.ChatId, orderText, inlineKeyboard);
+                sentMessage = await _telegramBotService.SendMessage(user.ChatId, orderText, inlineKeyboard, ParseMode.Html);
                 extendedOrder.MessageId = sentMessage.MessageId;
                 db.ExtendedOrders.Add(extendedOrder);
                 await db.SaveChangesAsync();

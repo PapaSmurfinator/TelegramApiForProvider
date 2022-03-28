@@ -10,7 +10,7 @@ namespace TelegramApiForProvider.Service
         public string CreateDescriptionForCron(OrderParameter orderParameter)
         {
             StringBuilder message = new StringBuilder();
-            message.AppendLine("Новый заказ.");
+            message.AppendLine("<b>Новый заказ.</b>");
             message.AppendLine();
             message.AppendLine($"Заказ № {orderParameter.OrderNumber} от {orderParameter.CreateDatetime:G}");
             message.AppendLine();
@@ -47,7 +47,7 @@ namespace TelegramApiForProvider.Service
         public string CreateDescriptionForPartner(OrderParameter orderParameter)
         {
             StringBuilder message = new StringBuilder();
-            message.AppendLine("Новый заказ.");
+            message.AppendLine("<b>Новый заказ.</b>");
             message.AppendLine();
             message.AppendLine($"Заказ № {orderParameter.OrderNumber} от {orderParameter.CreateDatetime:G}");
             message.AppendLine();

@@ -1,13 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
-using Telegram.Bot;
 using Telegram.Bot.Types;
 using TelegramApiForProvider.DbService;
 using TelegramApiForProvider.Extended;
@@ -41,48 +35,47 @@ namespace TelegramApiForProvider.Controllers
                 {
                     _telegramBotService.SendMessage(update.Message.From.Id, "Введите номер телефона");
                 }
-                else
+                Models.User user = new Models.User
                 {
-                    Models.User user = new Models.User
+                    Name = update.Message.From.Username,
+                    PhoneNumber = update.Message.Text,
+                    ChatId = update.Message.From.Id,
+                };
+                var response = await _sendService.ConfirmPassword(user.PhoneNumber);
+                if (response != null)
+                {
+                    if (!db.Users.Any(x => x.PhoneNumber == user.PhoneNumber))
                     {
-                        Name = update.Message.From.Username,
-                        PhoneNumber = update.Message.Text,
-                        ChatId = update.Message.From.Id,
-                    };
-                    var response = await _sendService.ConfirmPassword(user.PhoneNumber);
-                    if (response != null)
-                    {
-                        if (!db.Users.Any(x => x.PhoneNumber == user.PhoneNumber))
-                        {
-                            user.PartnerId = response.PartnerId;
-                            db.Users.Add(user);
-                            await db.SaveChangesAsync();
-                            _telegramBotService.SendMessage(update.Message.From.Id, "Вход выполнен, ждите заказов");
-                        }
-                        else
-                        {
-                            _telegramBotService.SendMessage(update.Message.From.Id, "Вы уже вошли");
-                        }
+                        user.PartnerId = response.PartnerId;
+                        db.Users.Add(user);
+                        await db.SaveChangesAsync();
+                        _telegramBotService.SendMessage(update.Message.From.Id, "Вход выполнен, ждите заказов");
                     }
-                    else
-                    {
-                        _telegramBotService.SendMessage(update.Message.From.Id, "Ошибка при входе");
-                    }
+                    _telegramBotService.SendMessage(update.Message.From.Id, "Вы уже вошли");
+
                 }
+                _telegramBotService.SendMessage(update.Message.From.Id, "Ошибка при входе");
+
+
             }
-            if (update.CallbackQuery != null)
+            await CallbackHandlingAsync(update.CallbackQuery);
+        }
+
+        private async Task CallbackHandlingAsync(CallbackQuery callbackQuery)
+        {
+            if (callbackQuery != null)
             {
-                long chatId = update.CallbackQuery.From.Id;
+                long chatId = callbackQuery.From.Id;
                 List<ExtendedOrder> extendedOrders = db.ExtendedOrders.ToList();
 
                 foreach (var item in extendedOrders)
                 {
                     if (item.IsAccept == null)
                     {
-                        if (update.CallbackQuery.Data == $"{item.OrderNumber} Принят")
+                        if (callbackQuery.Data == $"{item.OrderNumber} Принят")
                         {
                             item.IsAccept = true;
-                            _telegramBotService.SendMessage(chatId, $"Заказ номер {item.OrderNumber} принят на обработку");
+                            await _telegramBotService.SendMessage(chatId, $"Заказ номер {item.OrderNumber} принят на обработку.",item.MessageId);
                             _telegramBotService.EditMessage(chatId, (int)item.MessageId);
                             RequestData requestData = new RequestData
                             {
@@ -92,10 +85,10 @@ namespace TelegramApiForProvider.Controllers
                             db.SaveChanges();
                             await _sendService.SendStatus(requestData);
                         }
-                        if (update.CallbackQuery.Data == $"{item.OrderNumber} Отклонён")
+                        if (callbackQuery.Data == $"{item.OrderNumber} Отклонён")
                         {
                             item.IsAccept = false;
-                            _telegramBotService.SendMessage(chatId, $"Заказ номер {item.OrderNumber} отклонён");
+                            await _telegramBotService.SendMessage(chatId, $"Заказ номер {item.OrderNumber} отклонён.", item.MessageId);
                             _telegramBotService.EditMessage(chatId, (int)item.MessageId);
                             RequestData requestData = new RequestData
                             {

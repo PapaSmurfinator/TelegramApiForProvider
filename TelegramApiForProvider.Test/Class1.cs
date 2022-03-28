@@ -13,7 +13,7 @@ namespace TelegramApiForProvider.Tests
 {
     public class Class1
     {
-        Order order = new Order
+        OrderParameter order = new OrderParameter
         {
             PhoneNumber = "8977545743543",
             Amount = 643,
