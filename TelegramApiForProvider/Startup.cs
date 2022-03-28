@@ -59,7 +59,7 @@ namespace TelegramApiForProvider
             app.UseRouting();
 
             app.UseAuthorization();
-            app.ApplicationServices.UseScheduler(scheduler => scheduler.Schedule<ReminderService>().EveryMinute());
+            app.ApplicationServices.UseScheduler(scheduler => scheduler.Schedule<ReminderService>().Cron("*/3 * * * *"));
 
             app.UseEndpoints(endpoints =>
             {   

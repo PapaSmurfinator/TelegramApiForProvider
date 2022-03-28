@@ -33,30 +33,36 @@ namespace TelegramApiForProvider.Controllers
             {
                 if (update.Message.Text == "/start")
                 {
-                    _telegramBotService.SendMessage(update.Message.From.Id, "Введите номер телефона");
+                    _telegramBotService.SendMessage(update.Message.From.Id, "Введите номер телефона в формате 79*********");
                 }
-                Models.User user = new Models.User
+                else
                 {
-                    Name = update.Message.From.Username,
-                    PhoneNumber = update.Message.Text,
-                    ChatId = update.Message.From.Id,
-                };
-                var response = await _sendService.ConfirmPassword(user.PhoneNumber);
-                if (response != null)
-                {
-                    if (!db.Users.Any(x => x.PhoneNumber == user.PhoneNumber))
+                    Models.User user = new Models.User
                     {
-                        user.PartnerId = response.PartnerId;
-                        db.Users.Add(user);
-                        await db.SaveChangesAsync();
-                        _telegramBotService.SendMessage(update.Message.From.Id, "Вход выполнен, ждите заказов");
+                        Name = update.Message.From.Username,
+                        PhoneNumber = update.Message.Text,
+                        ChatId = update.Message.From.Id,
+                    };
+                    var response = _sendService.ConfirmPassword(user.PhoneNumber).Result;
+                    if (response != null)
+                    {
+                        if (!db.Users.Any(x => x.PhoneNumber == user.PhoneNumber))
+                        {
+                            user.PartnerId = response.PartnerId;
+                            db.Users.Add(user);
+                            await db.SaveChangesAsync();
+                            _telegramBotService.SendMessage(update.Message.From.Id, "Вход выполнен, ждите заказов");
+                        }
+                        else
+                        {
+                            _telegramBotService.SendMessage(update.Message.From.Id, "Вы уже вошли");
+                        }
                     }
-                    _telegramBotService.SendMessage(update.Message.From.Id, "Вы уже вошли");
-
+                    else
+                    {
+                        _telegramBotService.SendMessage(update.Message.From.Id, "Ошибка при входе");
+                    }
                 }
-                _telegramBotService.SendMessage(update.Message.From.Id, "Ошибка при входе");
-
-
             }
             await CallbackHandlingAsync(update.CallbackQuery);
         }
@@ -75,7 +81,7 @@ namespace TelegramApiForProvider.Controllers
                         if (callbackQuery.Data == $"{item.OrderNumber} Принят")
                         {
                             item.IsAccept = true;
-                            await _telegramBotService.SendMessage(chatId, $"Заказ номер {item.OrderNumber} принят на обработку.",item.MessageId);
+                            await _telegramBotService.SendMessage(chatId, $"Заказ номер {item.OrderNumber} принят на обработку.", item.MessageId);
                             _telegramBotService.EditMessage(chatId, (int)item.MessageId);
                             RequestData requestData = new RequestData
                             {
