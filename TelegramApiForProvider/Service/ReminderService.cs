@@ -1,10 +1,9 @@
 ﻿using Coravel.Invocable;
+using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TelegramApiForProvider.DbService;
-using TelegramApiForProvider.Extended;
 
 namespace TelegramApiForProvider.Service
 {
@@ -22,14 +21,14 @@ namespace TelegramApiForProvider.Service
 
         public async Task Invoke()
         {
-            List<ExtendedOrder> extendedOrders = db.ExtendedOrders.ToList();
-            foreach (var item in extendedOrders)
+            DateTime endDay = DateTime.Now.Date;
+            var orderMessage = db.OrderMessages.Include(x => x.Order).Where(x=>x.IsAccept==null).ToList();
+            foreach (var item in orderMessage)
             {
-                if (item.IsAccept == null && item.CreateDatetime <= DateTime.Today.AddDays(1))
+                if (item.IsAccept==null && item.Order.CreateDatetime.Date== endDay)
                 {
-                    var user = db.Users.Where(x => x.PartnerId == item.PartnerId).FirstOrDefault();
-                    await _telegramBotService.SendMessage(user.ChatId, $"❗️Вы все еще не приняли заказ.❗️\n\nЗаказ номер: {item.OrderNumber} от {item.CreateDatetime}", item.MessageId);
-                    continue;
+                    await _telegramBotService.SendMessage(item.ChatId, $"❗️Вы все еще не приняли заказ.❗️\n\n" +
+                                                                   $"Заказ номер: {item.Order.OrderNumber} от {item.Order.CreateDatetime}", item.MessageId);
                 }
             }
         }

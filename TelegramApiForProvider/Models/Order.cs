@@ -25,5 +25,7 @@ namespace TelegramApiForProvider.Models
         /// Дата и время создания заказа
         /// </summary>
         public DateTime CreateDatetime { get; set; }
+        
+        public List<OrderMessage> Message { get; set; }
     }
 }

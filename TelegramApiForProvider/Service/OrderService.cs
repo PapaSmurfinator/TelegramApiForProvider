@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using TelegramApiForProvider.Extensions;
 using TelegramApiForProvider.Models;
-using TelegramApiForProvider.Extended;
 
 namespace TelegramApiForProvider.Service
 {

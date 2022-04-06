@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
 using TelegramApiForProvider.DbService;
-using TelegramApiForProvider.Extended;
 using TelegramApiForProvider.Models;
 using TelegramApiForProvider.Service;
 
@@ -55,7 +55,10 @@ namespace TelegramApiForProvider.Controllers
                         }
                         else
                         {
-                            _telegramBotService.SendMessage(update.Message.From.Id, "Вы уже вошли");
+                            user.PartnerId=response.PartnerId;
+                            db.Users.Update(user);
+                            await db.SaveChangesAsync();
+                            _telegramBotService.SendMessage(update.Message.From.Id, "Вход выполнен, ждите заказов");
                         }
                     }
                     else
@@ -72,33 +75,43 @@ namespace TelegramApiForProvider.Controllers
             if (callbackQuery != null)
             {
                 long chatId = callbackQuery.From.Id;
-                List<ExtendedOrder> extendedOrders = db.ExtendedOrders.ToList();
+                List<OrderMessage> orderMessages = db.OrderMessages.Include(x=>x.Order).Where(x=>x.ChatId==chatId).ToList();
 
-                foreach (var item in extendedOrders)
+                foreach (var item in orderMessages)
                 {
                     if (item.IsAccept == null)
                     {
-                        if (callbackQuery.Data == $"{item.OrderNumber} Принят")
+                        if (callbackQuery.Data == $"{item.Order.OrderNumber} Принят")
                         {
-                            item.IsAccept = true;
-                            await _telegramBotService.SendMessage(chatId, $"Заказ номер {item.OrderNumber} принят на обработку.", item.MessageId);
-                            _telegramBotService.EditMessage(chatId, (int)item.MessageId);
+                            string orderNumber = callbackQuery.Data.Replace(" Принят", "");
+                            var orderrr = db.OrderMessages.Include(x => x.Order).Where(x => x.Order.OrderNumber == orderNumber);
+                            foreach (var order in orderrr)
+                            {
+                                order.IsAccept= true;
+                                await _telegramBotService.SendMessage(order.ChatId, $"Заказ номер {item.Order.OrderNumber} принят на обработку.", order.MessageId);
+                                _telegramBotService.EditMessage(order.ChatId, (int)order.MessageId);
+                            }
                             RequestData requestData = new RequestData
                             {
-                                OrderId = item.Id,
+                                OrderId = item.Order.Id,
                                 StatusId = (int)OrderStatus.Accept
                             };
                             db.SaveChanges();
                             await _sendService.SendStatus(requestData);
                         }
-                        if (callbackQuery.Data == $"{item.OrderNumber} Отклонён")
+                        if (callbackQuery.Data == $"{item.Order.OrderNumber} Отклонён")
                         {
-                            item.IsAccept = false;
-                            await _telegramBotService.SendMessage(chatId, $"Заказ номер {item.OrderNumber} отклонён.", item.MessageId);
-                            _telegramBotService.EditMessage(chatId, (int)item.MessageId);
+                            string orderNumber = callbackQuery.Data.Replace(" Отклонён", "");
+                            var orderrr = db.OrderMessages.Include(x => x.Order).Where(x => x.Order.OrderNumber == orderNumber);
+                            foreach (var order in orderrr)
+                            {
+                                order.IsAccept = true;
+                                await _telegramBotService.SendMessage(order.ChatId, $"Заказ номер {item.Order.OrderNumber} отклонён.", order.MessageId);
+                                _telegramBotService.EditMessage(order.ChatId, (int)order.MessageId);
+                            }
                             RequestData requestData = new RequestData
                             {
-                                OrderId = item.Id,
+                                OrderId = item.Order.Id,
                                 StatusId = (int)OrderStatus.Cancel
                             };
                             db.SaveChanges();
