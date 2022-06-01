@@ -11,7 +11,7 @@ namespace TelegramApiForProvider.Service
     {
         public async Task<CheckPartnerResponseModel> ConfirmPassword(string phoneNumber)
         {
-            var url = "https://staging-api.crondostav.ru/api/adminpanel/v1/Tbot/CheckPartnerPhone?" + $"partnerPhone={phoneNumber}";
+            var url = "https://api.cronmarket.ru/api/adminpanel/v1/Tbot/CheckPartnerPhone?" + $"partnerPhone={phoneNumber}";
             using var client = new HttpClient();
 
             var response = await client.GetAsync(url);
@@ -34,7 +34,7 @@ namespace TelegramApiForProvider.Service
                                     });
             var data = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var url = "https://staging-api.crondostav.ru/api/adminpanel/v1/Tbot/SetOrderStatus";
+            var url = "https://api.cronmarket.ru/api/adminpanel/v1/Tbot/SetOrderStatus";
             using var client = new HttpClient();
 
             var response = await client.PutAsync(url, data);

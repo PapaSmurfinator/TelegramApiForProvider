@@ -31,34 +31,39 @@ namespace TelegramApiForProvider.Controllers
         {
             if (update.Message != null)
             {
+                
                 if (update.Message.Text == "/start")
                 {
                     _telegramBotService.SendMessage(update.Message.From.Id, "Введите номер телефона в формате 79*********");
                 }
                 else
                 {
-                    Models.User user = new Models.User
-                    {
-                        Name = update.Message.From.Username,
-                        PhoneNumber = update.Message.Text,
-                        ChatId = update.Message.From.Id,
-                    };
-                    var response = _sendService.ConfirmPassword(user.PhoneNumber).Result;
+                    var phoneNumber = update.Message.Text;
+                    var response = _sendService.ConfirmPassword(phoneNumber).Result;
                     if (response != null)
                     {
-                        if (!db.Users.Any(x => x.PhoneNumber == user.PhoneNumber))
+                        if (!db.Users.Any(x => x.PhoneNumber == phoneNumber && x.ChatId == update.Message.From.Id))
                         {
-                            user.PartnerId = response.PartnerId;
+                            Models.User user = new Models.User
+                            {
+                                Name = update.Message.From.Username,
+                                PhoneNumber = update.Message.Text,
+                                ChatId = update.Message.From.Id,
+                                PartnerId = response.PartnerId
+                            };
                             db.Users.Add(user);
                             await db.SaveChangesAsync();
-                            _telegramBotService.SendMessage(update.Message.From.Id, "Вход выполнен, ждите заказов");
+                            _telegramBotService.SendMessage(update.Message.From.Id, $"Вход выполнен, {response.PartnerName}, ждите заказов");
                         }
                         else
                         {
-                            user.PartnerId=response.PartnerId;
-                            db.Users.Update(user);
+                            Models.User userUpdate = db.Users.FirstOrDefault(n => n.PhoneNumber == phoneNumber);
+                            userUpdate.PartnerId = response.PartnerId;
+                            userUpdate.Name = update.Message.From.Username;
+                            userUpdate.PhoneNumber = phoneNumber;
+                            db.Users.Update(userUpdate);
                             await db.SaveChangesAsync();
-                            _telegramBotService.SendMessage(update.Message.From.Id, "Вход выполнен, ждите заказов");
+                            _telegramBotService.SendMessage(update.Message.From.Id, $"Вход выполнен, {response.PartnerName}, ждите заказов");
                         }
                     }
                     else
@@ -75,7 +80,7 @@ namespace TelegramApiForProvider.Controllers
             if (callbackQuery != null)
             {
                 long chatId = callbackQuery.From.Id;
-                List<OrderMessage> orderMessages = db.OrderMessages.Include(x=>x.Order).Where(x=>x.ChatId==chatId).ToList();
+                List<OrderMessage> orderMessages = db.OrderMessages.Include(x => x.Order).Where(x => x.ChatId == chatId).ToList();
 
                 foreach (var item in orderMessages)
                 {
@@ -87,7 +92,7 @@ namespace TelegramApiForProvider.Controllers
                             var orderrr = db.OrderMessages.Include(x => x.Order).Where(x => x.Order.OrderNumber == orderNumber);
                             foreach (var order in orderrr)
                             {
-                                order.IsAccept= true;
+                                order.IsAccept = true;
                                 await _telegramBotService.SendMessage(order.ChatId, $"Заказ номер {item.Order.OrderNumber} принят на обработку.", order.MessageId);
                                 _telegramBotService.EditMessage(order.ChatId, (int)order.MessageId);
                             }
